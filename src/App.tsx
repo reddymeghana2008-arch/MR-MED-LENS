@@ -1,8 +1,8 @@
 import React from 'react';
 import { PatientProvider, usePatient } from './context/PatientContext';
 import { Header } from './components/Header';
+import { Sidebar } from './components/Sidebar';
 import { DisclaimerBanner } from './components/DisclaimerBanner';
-import { StepIndicator } from './components/StepIndicator';
 import { PatientForm } from './components/PatientForm';
 import { PatientDataPreview } from './components/PatientDataPreview';
 import { ReportProcessing } from './components/ReportProcessing';
@@ -13,53 +13,56 @@ const MainContent: React.FC = () => {
   const { currentStep, setCurrentStep, isConfirmed, setIsConfirmed } = usePatient();
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 font-sans">
-      {/* 1. Header with branding & tagline */}
+    <div className="min-h-screen flex flex-col bg-[#f4f7fb] text-slate-900 font-sans">
+      {/* 1. Header with branding & Dr. Smith Profile */}
       <Header />
 
-      {/* 2. Clinical Disclaimer Banner (Non-diagnostic, non-treatment) */}
+      {/* 2. Clinical Disclaimer Banner */}
       <DisclaimerBanner />
 
-      {/* 3. Main Workspace Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
-        {/* Step Indicator */}
-        <StepIndicator currentStep={currentStep} />
+      {/* 3. Main Workspace Area: Sidebar + Dynamic Step Container */}
+      <div className="flex-1 flex flex-col lg:flex-row w-full max-w-[1700px] mx-auto">
+        {/* Left Navigation Sidebar */}
+        <Sidebar className="hidden lg:flex" />
 
-        {/* Dynamic Step Views */}
-        {currentStep === 1 && (
-          !isConfirmed ? (
-            <PatientForm onSuccessContinue={() => setCurrentStep(2)} />
-          ) : (
-            <PatientDataPreview onBackToEdit={() => setIsConfirmed(false)} />
-          )
-        )}
+        {/* Center Main Stage Content */}
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
+          <div className="max-w-6xl mx-auto space-y-6">
+            {/* Dynamic Step Views */}
+            {currentStep === 1 && (
+              !isConfirmed ? (
+                <PatientForm onSuccessContinue={() => setCurrentStep(2)} />
+              ) : (
+                <PatientDataPreview onBackToEdit={() => setIsConfirmed(false)} />
+              )
+            )}
 
-        {currentStep === 2 && (
-          <ReportProcessing />
-        )}
-      </main>
-
+            {currentStep === 2 && (
+              <ReportProcessing />
+            )}
+          </div>
+        </main>
+      </div>
 
       {/* 4. Healthcare SaaS Footer */}
-      <footer className="bg-white border-t border-slate-200 mt-auto">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <footer className="bg-white border-t border-slate-200/80 mt-auto">
+        <div className="max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 py-5">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
             <div className="flex items-center gap-2">
-              <div className="w-5 h-5 rounded bg-cyan-600/10 text-cyan-700 flex items-center justify-center font-bold">
-                <HeartPulse className="w-3.5 h-3.5 text-cyan-600" />
+              <div className="w-5 h-5 rounded bg-blue-600/10 text-blue-700 flex items-center justify-center font-bold">
+                <HeartPulse className="w-3.5 h-3.5 text-blue-600" />
               </div>
               <span className="font-semibold text-slate-800">MedLens</span>
               <span>— AI-assisted clinical report intelligence</span>
             </div>
 
-
             <div className="flex items-center gap-4 text-slate-500">
               <span className="flex items-center gap-1">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                Frontend-Only Architecture
+                Deterministic Provenance Engine
               </span>
               <span>•</span>
-              <span>Step 1: Patient Intake</span>
+              <span>Healthcare SaaS v1.0</span>
             </div>
 
             <div className="text-slate-400 text-center sm:text-right">
