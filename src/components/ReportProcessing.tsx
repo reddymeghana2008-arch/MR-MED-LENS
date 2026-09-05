@@ -272,6 +272,29 @@ export const ReportProcessing: React.FC = () => {
           }),
           executiveSummary:
             'Clinical analysis of the uploaded diagnostic report indicates controlled glycemic control (HbA1c 6.8%) alongside mild normocytic anemia (Hemoglobin 11.4 g/dL) and elevated inflammatory marker activity (hs-CRP 3.4 mg/L). Renal clearance parameters and serum electrolytes remain within standard reference intervals. Findings correlate with documented patient complaints of persistent fatigue and exertional shortness of breath, requiring primary clinical review.',
+          clinicalTakeaways: [
+            {
+              category: 'Etiology Correlation',
+              title: 'Post-Viral Inflammatory Profile',
+              detail:
+                'Recent viral recovery correlates with acute hs-CRP elevation (3.4 mg/L) and mild normocytic anemia (Hb 11.4 g/dL), accounting for reported subacute fatigue.',
+              confidence: 96,
+            },
+            {
+              category: 'Glycemic Management',
+              title: 'Stable Diabetic Maintenance',
+              detail:
+                'HbA1c of 6.8% demonstrates effective therapeutic control on Metformin 500mg BID without hypoglycemic episodes.',
+              confidence: 98,
+            },
+            {
+              category: 'Organ Clearance',
+              title: 'Preserved Renal Filtration',
+              detail:
+                'eGFR of 84 mL/min and Creatinine 0.92 mg/dL indicate safe clearance parameters for ongoing ACE-i and Metformin regimens.',
+              confidence: 99,
+            },
+          ],
           findings: [
             {
               id: 'find-1',
@@ -285,6 +308,12 @@ export const ReportProcessing: React.FC = () => {
               sourceSection: 'Inflammatory & Acute Phase Reactants',
               sourceExcerpt: 'HIGH-SENSITIVITY C-REACTIVE PROTEIN: 3.4 mg/L [H] (Reference Range: < 1.0 mg/L). Result validated by automated turbidimetry. Marked acute elevation noted post-viral episode.',
               clinicalContext: 'Elevated acute phase reactant consistent with recent respiratory illness',
+              gaugeMin: 0,
+              gaugeMax: 6.0,
+              gaugeOptimalLow: 0,
+              gaugeOptimalHigh: 1.0,
+              gaugeCurrent: 3.4,
+              unit: 'mg/L',
             },
             {
               id: 'find-2',
@@ -298,6 +327,12 @@ export const ReportProcessing: React.FC = () => {
               sourceSection: 'Complete Blood Count (CBC) with Differential',
               sourceExcerpt: 'HEMOGLOBIN: 11.4 g/dL [L] (Reference Range: 12.0 - 16.0 g/dL). RBC Count: 3.92 M/uL. Mild normochromic, normocytic indices consistent with reported fatigue profile.',
               clinicalContext: 'Mild decrease in oxygen-carrying capacity; correlates with fatigue',
+              gaugeMin: 8.0,
+              gaugeMax: 18.0,
+              gaugeOptimalLow: 12.0,
+              gaugeOptimalHigh: 16.0,
+              gaugeCurrent: 11.4,
+              unit: 'g/dL',
             },
             {
               id: 'find-3',
@@ -311,6 +346,12 @@ export const ReportProcessing: React.FC = () => {
               sourceSection: 'Endocrine & Glycemic Biomarkers',
               sourceExcerpt: 'HEMOGLOBIN A1c: 6.8 % (Reference: < 5.7 % Normal; < 7.0 % Therapeutic Goal). Estimated Average Glucose: 148 mg/dL. Current regimen Metformin 500mg BID shows stable outpatient control.',
               clinicalContext: 'Adequate chronic glycemic management on oral Metformin',
+              gaugeMin: 4.0,
+              gaugeMax: 12.0,
+              gaugeOptimalLow: 4.5,
+              gaugeOptimalHigh: 7.0,
+              gaugeCurrent: 6.8,
+              unit: '%',
             },
             {
               id: 'find-4',
@@ -324,6 +365,12 @@ export const ReportProcessing: React.FC = () => {
               sourceSection: 'Comprehensive Metabolic Panel (CMP)',
               sourceExcerpt: 'CREATININE: 0.92 mg/dL (Reference Range: 0.59 - 1.04 mg/dL). Blood Urea Nitrogen (BUN): 14 mg/dL. Normal renal filtration baseline.',
               clinicalContext: 'Preserved glomerular filtration function',
+              gaugeMin: 0.3,
+              gaugeMax: 2.0,
+              gaugeOptimalLow: 0.59,
+              gaugeOptimalHigh: 1.04,
+              gaugeCurrent: 0.92,
+              unit: 'mg/dL',
             },
             {
               id: 'find-5',
@@ -337,6 +384,12 @@ export const ReportProcessing: React.FC = () => {
               sourceSection: 'Comprehensive Metabolic Panel (CMP)',
               sourceExcerpt: 'eGFR (CKD-EPI 2021): 84 mL/min/1.73m2 (Reference Range: > 60 mL/min/1.73m2). Stage 2 age-appropriate glomerular clearance.',
               clinicalContext: 'No laboratory evidence of renal impairment',
+              gaugeMin: 15,
+              gaugeMax: 120,
+              gaugeOptimalLow: 60,
+              gaugeOptimalHigh: 120,
+              gaugeCurrent: 84,
+              unit: 'mL/min',
             },
             {
               id: 'find-6',
@@ -350,6 +403,12 @@ export const ReportProcessing: React.FC = () => {
               sourceSection: 'Electrolytes & Fluid Homeostasis',
               sourceExcerpt: 'POTASSIUM, SERUM: 4.3 mEq/L (Reference Range: 3.5 - 5.0 mEq/L). Stable electrolyte balance on ACE-inhibitor (Lisinopril 10mg).',
               clinicalContext: 'Normal electrolyte homeostasis during Lisinopril therapy',
+              gaugeMin: 2.5,
+              gaugeMax: 6.5,
+              gaugeOptimalLow: 3.5,
+              gaugeOptimalHigh: 5.0,
+              gaugeCurrent: 4.3,
+              unit: 'mEq/L',
             },
           ],
           riskItems: [
@@ -394,6 +453,41 @@ export const ReportProcessing: React.FC = () => {
               sourceSection: 'Endocrine & Glycemic Biomarkers',
               sourceExcerpt: 'HEMOGLOBIN A1c: 6.8 % (Reference: < 5.7 % Normal; < 7.0 % Therapeutic Goal). Current regimen Metformin 500mg BID shows stable outpatient control.',
               isPrimary: false,
+            },
+          ],
+          alerts: [
+            {
+              id: 'alert-1',
+              type: 'Drug-Condition',
+              severity: 'warning',
+              title: 'ACE-Inhibitor & Potassium Surveillance',
+              description:
+                'Patient active on Lisinopril 10mg daily. Serum Potassium is currently optimal (4.3 mEq/L, normal range 3.5–5.0 mEq/L). Maintain standard renal electrolyte surveillance.',
+              implicatedItem: 'Lisinopril 10mg + K+ 4.3 mEq/L',
+              clinicalAction: 'Routine 6-month CMP surveillance recommended',
+              sourceSection: 'Electrolytes & Fluid Homeostasis',
+            },
+            {
+              id: 'alert-2',
+              type: 'Organ-Clearance',
+              severity: 'info',
+              title: 'Metformin Renal Safety Threshold Confirmed',
+              description:
+                'Estimated GFR of 84 mL/min/1.73m² demonstrates robust renal clearance, well above the 30–45 mL/min contraindication adjustment threshold.',
+              implicatedItem: 'Metformin 500mg BID + eGFR 84',
+              clinicalAction: 'Safe to maintain current dosing schedule',
+              sourceSection: 'Comprehensive Metabolic Panel (CMP)',
+            },
+            {
+              id: 'alert-3',
+              type: 'Allergy-Sensitivity',
+              severity: 'critical',
+              title: 'Documented Drug Allergy: Penicillin & Sulfa',
+              description:
+                'Confirmed history of Penicillin-induced urticaria/rash and Sulfonamide intolerance. Ensure formulary guard blocks beta-lactam and sulfa prescribing.',
+              implicatedItem: 'Penicillin, Sulfonamides',
+              clinicalAction: 'Active allergy tag linked to patient profile',
+              sourceSection: 'Documented Patient Sensitivities',
             },
           ],
           structuredData: {

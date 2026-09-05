@@ -53,6 +53,12 @@ export interface DetailedFinding {
   sourceSection: string;
   sourceExcerpt: string;
   clinicalContext?: string;
+  gaugeMin?: number;
+  gaugeMax?: number;
+  gaugeOptimalLow?: number;
+  gaugeOptimalHigh?: number;
+  gaugeCurrent?: number;
+  unit?: string;
 }
 
 export interface RiskAttentionItem {
@@ -67,6 +73,26 @@ export interface RiskAttentionItem {
   sourceSection?: string;
   sourceExcerpt?: string;
   isPrimary?: boolean;
+}
+
+export type AlertSeverity = 'critical' | 'warning' | 'info';
+
+export interface MedicationAlert {
+  id: string;
+  type: 'Drug-Condition' | 'Organ-Clearance' | 'Allergy-Sensitivity' | 'Therapeutic-Target';
+  severity: AlertSeverity;
+  title: string;
+  description: string;
+  implicatedItem: string;
+  clinicalAction: string;
+  sourceSection?: string;
+}
+
+export interface ClinicalTakeaway {
+  category: string;
+  title: string;
+  detail: string;
+  confidence: number;
 }
 
 export interface StructuredClinicalData {
@@ -84,8 +110,10 @@ export interface ReportProcessingResult {
   fileType?: string;
   processedAt: string;
   executiveSummary: string;
+  clinicalTakeaways?: ClinicalTakeaway[];
   findings: DetailedFinding[];
   riskItems: RiskAttentionItem[];
+  alerts?: MedicationAlert[];
   structuredData: StructuredClinicalData;
   summaryNote: string;
 }
