@@ -4,6 +4,8 @@ import type { UploadedReport, ReportProcessingResult } from '../types/patient';
 import { ClinicalAnalysisDashboard } from './ClinicalAnalysisDashboard';
 import { apiProcessReport } from '../services/api';
 import { buildMedicalTimeline } from '../utils/clinicalEngine';
+import { formatFileSize, getFileTypeLabel } from '../utils/formatters';
+import { sanitizeFileName, validateReportFile } from '../utils/validation';
 import {
   UploadCloud,
   FileText,
@@ -21,19 +23,6 @@ import {
 } from 'lucide-react';
 
 
-
-const ALLOWED_EXTENSIONS = ['.pdf', '.png', '.jpg', '.jpeg'];
-const ALLOWED_MIME_TYPES = [
-  'application/pdf',
-  'image/png',
-  'image/jpeg',
-  'image/jpg',
-];
-const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024; // 25 MB
-
-const sanitizeFileName = (name: string): string => {
-  return name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 120);
-};
 
 export const ReportProcessing: React.FC = () => {
   const {
@@ -68,66 +57,19 @@ export const ReportProcessing: React.FC = () => {
   const patientAge = formData.age || storedRecord?.age;
   const patientSex = formData.sex || storedRecord?.sex;
 
-  const formatFileSize = (bytes: number): string => {
-    if (!bytes || bytes <= 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
-  const getFileTypeLabel = (fileType: string = '', fileName: string = ''): string => {
-    const fType = fileType || '';
-    const fName = fileName ? fileName.toLowerCase() : '';
-    if (fType.includes('pdf') || fName.endsWith('.pdf')) {
-      return 'PDF Document';
-    }
-    if (fType.includes('png') || fName.endsWith('.png')) {
-      return 'PNG Image';
-    }
-    if (
-      fType.includes('jpeg') ||
-      fType.includes('jpg') ||
-      fName.endsWith('.jpg') ||
-      fName.endsWith('.jpeg')
-    ) {
-      return 'JPEG Image';
-    }
-    return 'Medical Report File';
-  };
-
   const validateAndSelectFile = (file: File) => {
     setErrorMessage(null);
     setProcessingResult(null);
 
-    // Validate size (cannot be empty or exceed max limit)
-    if (!file || file.size <= 0) {
-      setErrorMessage(
-        'The selected file is empty (0 bytes). Please upload a valid medical report.'
-      );
-      return false;
-    }
-
-    if (file.size > MAX_FILE_SIZE_BYTES) {
-      setErrorMessage(
-        `File is too large (${formatFileSize(file.size)}). Maximum allowed file size is 25 MB.`
-      );
-      return false;
-    }
-
-    // Validate type and extension
-    const lowerName = file.name.toLowerCase();
-    const hasValidExt = ALLOWED_EXTENSIONS.some((ext) => lowerName.endsWith(ext));
-    const hasValidMime = ALLOWED_MIME_TYPES.includes(file.type);
-
-    if (!hasValidExt && !hasValidMime) {
-      setErrorMessage(
-        'Invalid file format. Please upload a PDF, PNG, JPG, or JPEG file.'
-      );
+    // Use shared validation utility
+    const validation = validateReportFile({ name: file.name, size: file.size, type: file.type });
+    if (!validation.isValid) {
+      setErrorMessage(validation.error || 'Invalid file.');
       return false;
     }
 
     const sanitizedName = sanitizeFileName(file.name);
+    const lowerName = file.name.toLowerCase();
 
     const report: UploadedReport = {
       id: `REP-${Date.now().toString().slice(-6)}`,

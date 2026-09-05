@@ -208,4 +208,36 @@ describe('ClinicalAnalysisDashboard Component', () => {
       { timeout: 3500 }
     );
   }, 5000);
+
+  it('filters biomarkers dynamically when typing in search input', async () => {
+    const user = userEvent.setup();
+    render(
+      <PatientProvider>
+        <DashboardTestWrapper />
+      </PatientProvider>
+    );
+
+    const searchInput = screen.getByLabelText(/Filter biomarkers by name/i);
+    await user.type(searchInput, 'Hemoglobin');
+
+    expect(screen.getByText(/Hemoglobin \(Hb\)/i)).toBeInTheDocument();
+    expect(screen.queryByText(/High-Sensitivity C-Reactive Protein/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Serum Creatinine/i)).not.toBeInTheDocument();
+  });
+
+  it('triggers window.print when clicking Export PDF / Print button', async () => {
+    const user = userEvent.setup();
+    const printSpy = vi.spyOn(window, 'print').mockImplementation(() => {});
+    render(
+      <PatientProvider>
+        <DashboardTestWrapper />
+      </PatientProvider>
+    );
+
+    const exportBtn = screen.getByRole('button', { name: /Export PDF \/ Print/i });
+    await user.click(exportBtn);
+
+    expect(printSpy).toHaveBeenCalled();
+    printSpy.mockRestore();
+  });
 });

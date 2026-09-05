@@ -9,6 +9,7 @@
     "server": "node server/index.js",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview"
