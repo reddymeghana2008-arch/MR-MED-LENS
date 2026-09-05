@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { usePatient } from '../context/PatientContext';
 import type {
   FindingStatus,
@@ -8,6 +8,7 @@ import type {
   MedicationAlert,
   AlertSeverity,
 } from '../types/patient';
+import { apiGenerateInsight } from '../services/api';
 import {
   CheckCircle2,
   AlertTriangle,
@@ -42,7 +43,7 @@ interface ClinicalAnalysisDashboardProps {
 export const ClinicalAnalysisDashboard: React.FC<ClinicalAnalysisDashboardProps> = ({
   onStartNewAnalysis,
 }) => {
-  const { formData, storedRecord, setCurrentStep, processingResult } = usePatient();
+  const { formData, storedRecord, setCurrentStep, setIsConfirmed, processingResult } = usePatient();
   const [activeTab, setActiveTab] = useState<'all' | 'abnormal'>('all');
   const [selectedFinding, setSelectedFinding] = useState<DetailedFinding | null>(null);
   const [copiedExcerpt, setCopiedExcerpt] = useState(false);
@@ -52,9 +53,14 @@ export const ClinicalAnalysisDashboard: React.FC<ClinicalAnalysisDashboardProps>
   const [isGeneratingInsight, setIsGeneratingInsight] = useState(false);
   const [showInsightModal, setShowInsightModal] = useState(false);
   const [insightGenerationStage, setInsightGenerationStage] = useState(0);
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   React.useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    return () => {
+      // Clean up all pending timers if component unmounts
+      timersRef.current.forEach((t) => clearTimeout(t));
+    };
   }, []);
 
   // Keyboard escape listener to close modals
@@ -90,7 +96,8 @@ export const ClinicalAnalysisDashboard: React.FC<ClinicalAnalysisDashboardProps>
       });
     }
     setCopiedExcerpt(true);
-    setTimeout(() => setCopiedExcerpt(false), 2000);
+    const t = setTimeout(() => setCopiedExcerpt(false), 2000);
+    timersRef.current.push(t);
   };
 
   const handleCopyBrief = (text: string) => {
@@ -112,7 +119,8 @@ export const ClinicalAnalysisDashboard: React.FC<ClinicalAnalysisDashboardProps>
       });
     }
     setCopiedBrief(true);
-    setTimeout(() => setCopiedBrief(false), 2000);
+    const t = setTimeout(() => setCopiedBrief(false), 2000);
+    timersRef.current.push(t);
   };
 
   const handleTriggerGenerateInsight = () => {
@@ -120,18 +128,32 @@ export const ClinicalAnalysisDashboard: React.FC<ClinicalAnalysisDashboardProps>
     setIsGeneratingInsight(true);
     setInsightGenerationStage(0);
 
-    setTimeout(() => setInsightGenerationStage(1), 600);
-    setTimeout(() => setInsightGenerationStage(2), 1300);
-    setTimeout(() => {
-      setInsightGenerationStage(3);
-      setIsGeneratingInsight(false);
-    }, 2000);
+    // Call backend API in background
+    apiGenerateInsight(storedRecord || { patientName, age: patientAge, sex: patientSex as any }).catch(() => {});
+
+    // Clear prior timers
+    timersRef.current.forEach((t) => clearTimeout(t));
+    timersRef.current = [];
+
+    timersRef.current.push(
+      setTimeout(() => setInsightGenerationStage(1), 600)
+    );
+    timersRef.current.push(
+      setTimeout(() => setInsightGenerationStage(2), 1300)
+    );
+    timersRef.current.push(
+      setTimeout(() => {
+        setInsightGenerationStage(3);
+        setIsGeneratingInsight(false);
+      }, 2000)
+    );
   };
 
   const handleSelectRiskItem = (risk: RiskAttentionItem) => {
+    const riskFirstWord = (risk.title || '').split(' ')[0]?.toLowerCase() || '';
     const matching = processingResult.findings.find(
       (f) =>
-        f.finding.toLowerCase().includes(risk.title.split(' ')[0].toLowerCase()) ||
+        (riskFirstWord && f.finding.toLowerCase().includes(riskFirstWord)) ||
         risk.title.toLowerCase().includes(f.finding.toLowerCase())
     );
     if (matching) {
@@ -227,6 +249,8 @@ export const ClinicalAnalysisDashboard: React.FC<ClinicalAnalysisDashboardProps>
         return 'bg-amber-500 text-white border-amber-600';
       case 'Observation':
         return 'bg-slate-700 text-slate-100 border-slate-600';
+      default:
+        return 'bg-slate-100 text-slate-800 border-slate-300';
     }
   };
 
@@ -238,6 +262,8 @@ export const ClinicalAnalysisDashboard: React.FC<ClinicalAnalysisDashboardProps>
         return 'bg-amber-50 text-amber-900 border-amber-300';
       case 'info':
         return 'bg-cyan-50 text-cyan-900 border-cyan-200';
+      default:
+        return 'bg-slate-100 text-slate-800 border-slate-200';
     }
   };
 
@@ -256,10 +282,11 @@ export const ClinicalAnalysisDashboard: React.FC<ClinicalAnalysisDashboardProps>
             <div className="w-13 h-13 rounded-2xl bg-gradient-to-tr from-cyan-600 to-blue-700 text-white flex items-center justify-center font-bold text-lg shadow-sm shrink-0">
               {patientName
                 .split(' ')
+                .filter(Boolean)
                 .map((n) => n[0])
                 .join('')
                 .slice(0, 2)
-                .toUpperCase() || 'EV'}
+                .toUpperCase() || 'PT'}
             </div>
 
             <div className="space-y-1">
@@ -322,7 +349,10 @@ export const ClinicalAnalysisDashboard: React.FC<ClinicalAnalysisDashboardProps>
 
             <button
               type="button"
-              onClick={() => setCurrentStep(1)}
+              onClick={() => {
+                setIsConfirmed(false);
+                setCurrentStep(1);
+              }}
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 transition-colors cursor-pointer"
               title="Edit Patient Demographics"
             >
@@ -367,23 +397,39 @@ export const ClinicalAnalysisDashboard: React.FC<ClinicalAnalysisDashboardProps>
               {processingResult.executiveSummary}
             </p>
 
-            {/* 3 Structured Bulleted Takeaways */}
+            {/* Structured Bulleted Takeaways */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 relative z-10">
               {processingResult.clinicalTakeaways?.map((takeaway, idx) => (
                 <div
                   key={idx}
-                  className="p-3.5 rounded-xl bg-slate-800/70 border border-slate-700/60 space-y-1.5 hover:border-cyan-500/40 transition-colors"
+                  className="p-3.5 rounded-xl bg-slate-800/70 border border-slate-700/60 space-y-2 hover:border-cyan-500/40 transition-colors flex flex-col justify-between"
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-400">
-                      {takeaway.category}
-                    </span>
-                    <span className="text-[10px] font-mono text-slate-400">
-                      {takeaway.confidence}% Conf
-                    </span>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-400">
+                        {takeaway.category}
+                      </span>
+                      <span className="text-[10px] font-mono text-slate-400">
+                        {takeaway.confidence}% Conf
+                      </span>
+                    </div>
+                    <h4 className="text-xs font-bold text-white">{takeaway.title}</h4>
+                    <p className="text-[11px] text-slate-300 leading-normal">{takeaway.detail}</p>
                   </div>
-                  <h4 className="text-xs font-bold text-white">{takeaway.title}</h4>
-                  <p className="text-[11px] text-slate-300 leading-normal">{takeaway.detail}</p>
+                  {(takeaway.whyItMatters || takeaway.recommendedAction) && (
+                    <div className="pt-2 border-t border-slate-700/50 space-y-1 text-[10px]">
+                      {takeaway.whyItMatters && (
+                        <p className="text-cyan-200">
+                          <strong className="text-cyan-300">Why it matters:</strong> {takeaway.whyItMatters}
+                        </p>
+                      )}
+                      {takeaway.recommendedAction && (
+                        <p className="text-amber-200">
+                          <strong className="text-amber-300">Recommended step:</strong> {takeaway.recommendedAction}
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -462,7 +508,10 @@ export const ClinicalAnalysisDashboard: React.FC<ClinicalAnalysisDashboardProps>
                 const min = finding.gaugeMin ?? 0;
                 const max = finding.gaugeMax ?? 100;
                 const current = finding.gaugeCurrent ?? 50;
-                const percent = Math.min(100, Math.max(0, ((current - min) / (max - min)) * 100));
+                const percent =
+                  max === min
+                    ? 50
+                    : Math.min(100, Math.max(0, ((current - min) / (max - min)) * 100));
 
                 return (
                   <div
@@ -482,7 +531,14 @@ export const ClinicalAnalysisDashboard: React.FC<ClinicalAnalysisDashboardProps>
                           </span>
                           {getStatusBadge(finding.status)}
                         </div>
-                        <p className="text-xs text-slate-500">{finding.category}</p>
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                          <span>{finding.category}</span>
+                          {finding.trendLabel && (
+                            <span className="font-semibold text-cyan-800 bg-cyan-50 border border-cyan-200 px-1.5 py-0.5 rounded text-[10px]">
+                              {finding.trendLabel}
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       <div className="flex items-center gap-4 shrink-0">
@@ -688,7 +744,7 @@ export const ClinicalAnalysisDashboard: React.FC<ClinicalAnalysisDashboardProps>
             <div className="space-y-2.5">
               {processingResult.structuredData.medications.map((med, idx) => (
                 <div
-                  key={idx}
+                  key={`${med.name}-${idx}`}
                   className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-2"
                 >
                   <div className="flex items-center gap-2.5">
@@ -727,7 +783,7 @@ export const ClinicalAnalysisDashboard: React.FC<ClinicalAnalysisDashboardProps>
             <div className="space-y-2">
               {processingResult.structuredData.conditionsHistory.map((cond, idx) => (
                 <div
-                  key={idx}
+                  key={`${cond.condition}-${idx}`}
                   className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between"
                 >
                   <div className="flex items-center gap-2">
@@ -738,6 +794,34 @@ export const ClinicalAnalysisDashboard: React.FC<ClinicalAnalysisDashboardProps>
                 </div>
               ))}
             </div>
+
+            {/* Medical Timeline */}
+            {processingResult.timeline && processingResult.timeline.length > 0 && (
+              <div className="pt-3 border-t border-slate-100 space-y-2">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                  Chronological Medical History Timeline
+                </p>
+                <div className="space-y-2">
+                  {processingResult.timeline.map((event) => (
+                    <div
+                      key={event.id}
+                      className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs flex items-start justify-between gap-2"
+                    >
+                      <div className="space-y-0.5 min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-bold text-slate-900">{event.title}</span>
+                          <span className="text-[9px] uppercase px-1.5 py-0.5 rounded bg-slate-200 text-slate-700 font-semibold">
+                            {event.type}
+                          </span>
+                        </div>
+                        <p className="text-slate-600 text-[11px] leading-tight">{event.description}</p>
+                      </div>
+                      <span className="font-mono text-[10px] text-slate-400 shrink-0">{event.date}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* "Why MedLens?" Value Card */}
@@ -785,7 +869,10 @@ export const ClinicalAnalysisDashboard: React.FC<ClinicalAnalysisDashboardProps>
       <div className="p-5 rounded-2xl bg-white border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
         <button
           type="button"
-          onClick={() => setCurrentStep(1)}
+          onClick={() => {
+            setIsConfirmed(false);
+            setCurrentStep(1);
+          }}
           className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-700 font-semibold text-xs transition-colors cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -876,7 +963,7 @@ export const ClinicalAnalysisDashboard: React.FC<ClinicalAnalysisDashboardProps>
                 <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3 text-xs leading-relaxed text-slate-800">
                   <div className="flex items-center justify-between border-b border-slate-200 pb-2">
                     <span className="font-bold text-slate-900 text-sm">
-                      Clinical Impression & Decision Brief for {patientName} (58F)
+                      Clinical Impression & Decision Brief for {patientName} ({patientAge}{patientSex ? patientSex[0].toUpperCase() : ''})
                     </span>
                     <span className="font-mono text-[10px] text-slate-500">MRN: {patientMrn}</span>
                   </div>
@@ -913,7 +1000,7 @@ export const ClinicalAnalysisDashboard: React.FC<ClinicalAnalysisDashboardProps>
                     type="button"
                     onClick={() =>
                       handleCopyBrief(
-                        `CLINICAL ACTION BRIEF - ${patientName} (${patientAge}F, MRN: ${patientMrn})\n\n` +
+                        `CLINICAL ACTION BRIEF - ${patientName} (${patientAge}${patientSex ? patientSex[0].toUpperCase() : ''}, MRN: ${patientMrn})\n\n` +
                           `• Impression: Post-viral inflammatory elevation (hs-CRP 3.4 mg/L) & mild anemia (Hb 11.4 g/dL).\n` +
                           `• Diabetes: Controlled on Metformin (HbA1c 6.8%).\n` +
                           `• Renal/K+: Stable eGFR 84, Potassium 4.3 mEq/L on Lisinopril 10mg.\n` +

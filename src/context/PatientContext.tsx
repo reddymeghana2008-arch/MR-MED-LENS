@@ -6,6 +6,7 @@ import type {
   ReportProcessingResult,
 } from '../types/patient';
 import { INITIAL_PATIENT_DATA, SAMPLE_PATIENT_DATA } from '../types/patient';
+import { apiSavePatient } from '../services/api';
 
 interface PatientContextType {
   formData: PatientFormData;
@@ -64,6 +65,10 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
     setStoredRecord(record);
     setIsConfirmed(true);
     setCurrentStep(2);
+
+    // Seamlessly synchronize with backend API in background
+    apiSavePatient(formData).catch(() => {});
+
     return record;
   };
 

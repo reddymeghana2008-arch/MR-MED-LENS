@@ -59,6 +59,9 @@ export interface DetailedFinding {
   gaugeOptimalHigh?: number;
   gaugeCurrent?: number;
   unit?: string;
+  priorValue?: string;
+  trend?: 'elevated_increase' | 'decreased' | 'stable_target' | 'normal_baseline';
+  trendLabel?: string;
 }
 
 export interface RiskAttentionItem {
@@ -93,13 +96,28 @@ export interface ClinicalTakeaway {
   title: string;
   detail: string;
   confidence: number;
+  finding?: string;
+  supportingData?: string;
+  whyItMatters?: string;
+  recommendedAction?: string;
+  severity?: 'High' | 'Moderate' | 'Low' | 'Routine';
+}
+
+export interface MedicalTimelineEvent {
+  id: string;
+  date: string;
+  title: string;
+  type: 'condition' | 'medication' | 'lab' | 'symptom';
+  category: string;
+  description: string;
+  status: 'active' | 'resolved' | 'monitoring';
 }
 
 export interface StructuredClinicalData {
   demographics: { label: string; value: string }[];
-  laboratoryFindings: { test: string; result: string; flag: string; range: string }[];
-  medications: { name: string; dosage: string; source: string }[];
-  conditionsHistory: { condition: string; source: string }[];
+  laboratoryFindings: { test: string; result: string; flag: string; range: string; prior?: string }[];
+  medications: { name: string; dosage: string; source: string; frequency?: string; indication?: string }[];
+  conditionsHistory: { condition: string; source: string; onset?: string }[];
   recommendations: { action: string; note: string; priority: 'Standard' | 'Elevated' }[];
 }
 
@@ -115,6 +133,7 @@ export interface ReportProcessingResult {
   riskItems: RiskAttentionItem[];
   alerts?: MedicationAlert[];
   structuredData: StructuredClinicalData;
+  timeline?: MedicalTimelineEvent[];
   summaryNote: string;
 }
 
@@ -139,5 +158,3 @@ export const SAMPLE_PATIENT_DATA: PatientFormData = {
   currentMedications: 'Lisinopril 10mg PO daily, Metformin 500mg PO BID with meals, Vitamin D3 1000 IU daily.',
   additionalNotes: 'Patient notes symptoms started shortly after recent upper respiratory infection resolved. No chest pain, syncope, or orthopnea reported.',
 };
-
-

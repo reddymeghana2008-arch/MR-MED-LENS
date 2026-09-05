@@ -2,6 +2,8 @@ import React, { useState, useRef } from 'react';
 import { usePatient } from '../context/PatientContext';
 import type { UploadedReport, ReportProcessingResult } from '../types/patient';
 import { ClinicalAnalysisDashboard } from './ClinicalAnalysisDashboard';
+import { apiProcessReport } from '../services/api';
+import { buildMedicalTimeline } from '../utils/clinicalEngine';
 import {
   UploadCloud,
   FileText,
@@ -38,6 +40,7 @@ export const ReportProcessing: React.FC = () => {
     formData,
     storedRecord,
     setCurrentStep,
+    setIsConfirmed,
     uploadedReport,
     setUploadedReport,
     processingResult,
@@ -66,25 +69,27 @@ export const ReportProcessing: React.FC = () => {
   const patientSex = formData.sex || storedRecord?.sex;
 
   const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 B';
+    if (!bytes || bytes <= 0) return '0 B';
     const k = 1024;
     const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  const getFileTypeLabel = (fileType: string, fileName: string): string => {
-    if (fileType.includes('pdf') || fileName.toLowerCase().endsWith('.pdf')) {
+  const getFileTypeLabel = (fileType: string = '', fileName: string = ''): string => {
+    const fType = fileType || '';
+    const fName = fileName ? fileName.toLowerCase() : '';
+    if (fType.includes('pdf') || fName.endsWith('.pdf')) {
       return 'PDF Document';
     }
-    if (fileType.includes('png') || fileName.toLowerCase().endsWith('.png')) {
+    if (fType.includes('png') || fName.endsWith('.png')) {
       return 'PNG Image';
     }
     if (
-      fileType.includes('jpeg') ||
-      fileType.includes('jpg') ||
-      fileName.toLowerCase().endsWith('.jpg') ||
-      fileName.toLowerCase().endsWith('.jpeg')
+      fType.includes('jpeg') ||
+      fType.includes('jpg') ||
+      fName.endsWith('.jpg') ||
+      fName.endsWith('.jpeg')
     ) {
       return 'JPEG Image';
     }
@@ -279,6 +284,11 @@ export const ReportProcessing: React.FC = () => {
               detail:
                 'Recent viral recovery correlates with acute hs-CRP elevation (3.4 mg/L) and mild normocytic anemia (Hb 11.4 g/dL), accounting for reported subacute fatigue.',
               confidence: 96,
+              finding: 'hs-CRP 3.4 mg/L (High), Hb 11.4 g/dL (Low)',
+              supportingData: 'Reported 3-week post-viral fatigue alongside elevated inflammatory markers',
+              whyItMatters: 'Objective physiological grounding for persistent fatigue presentation',
+              recommendedAction: 'Consider repeating hs-CRP and CBC in 4–6 weeks post-convalescence',
+              severity: 'Moderate',
             },
             {
               category: 'Glycemic Management',
@@ -286,6 +296,11 @@ export const ReportProcessing: React.FC = () => {
               detail:
                 'HbA1c of 6.8% demonstrates effective therapeutic control on Metformin 500mg BID without hypoglycemic episodes.',
               confidence: 98,
+              finding: 'HbA1c 6.8% (Target < 7.0% met)',
+              supportingData: 'Documented intake of Metformin 500mg PO BID with meals',
+              whyItMatters: 'Glycemic target is achieved with good outpatient compliance',
+              recommendedAction: 'Maintain current Metformin regimen; routine 3–6 month surveillance',
+              severity: 'Routine',
             },
             {
               category: 'Organ Clearance',
@@ -293,6 +308,11 @@ export const ReportProcessing: React.FC = () => {
               detail:
                 'eGFR of 84 mL/min and Creatinine 0.92 mg/dL indicate safe clearance parameters for ongoing ACE-i and Metformin regimens.',
               confidence: 99,
+              finding: 'Serum Creatinine 0.92 mg/dL, eGFR 84 mL/min',
+              supportingData: 'Preserved glomerular filtration with Potassium 4.3 mEq/L',
+              whyItMatters: 'Confirms safety profile for Lisinopril and Metformin therapies',
+              recommendedAction: 'Continue standard 6-month renal & electrolyte surveillance',
+              severity: 'Routine',
             },
           ],
           findings: [
@@ -314,6 +334,9 @@ export const ReportProcessing: React.FC = () => {
               gaugeOptimalHigh: 1.0,
               gaugeCurrent: 3.4,
               unit: 'mg/L',
+              priorValue: '0.8 mg/L (6 mo ago)',
+              trend: 'elevated_increase',
+              trendLabel: '+2.6 mg/L (Post-viral elevation)',
             },
             {
               id: 'find-2',
@@ -333,6 +356,9 @@ export const ReportProcessing: React.FC = () => {
               gaugeOptimalHigh: 16.0,
               gaugeCurrent: 11.4,
               unit: 'g/dL',
+              priorValue: '12.8 g/dL (6 mo ago)',
+              trend: 'decreased',
+              trendLabel: '-1.4 g/dL (Mild drop)',
             },
             {
               id: 'find-3',
@@ -352,6 +378,9 @@ export const ReportProcessing: React.FC = () => {
               gaugeOptimalHigh: 7.0,
               gaugeCurrent: 6.8,
               unit: '%',
+              priorValue: '7.1% (6 mo ago)',
+              trend: 'stable_target',
+              trendLabel: '-0.3% (Improved control)',
             },
             {
               id: 'find-4',
@@ -482,10 +511,9 @@ export const ReportProcessing: React.FC = () => {
               id: 'alert-3',
               type: 'Allergy-Sensitivity',
               severity: 'critical',
-              title: 'Documented Drug Allergy: Penicillin & Sulfa',
-              description:
-                'Confirmed history of Penicillin-induced urticaria/rash and Sulfonamide intolerance. Ensure formulary guard blocks beta-lactam and sulfa prescribing.',
-              implicatedItem: 'Penicillin, Sulfonamides',
+              title: `Documented Allergy: ${(formData.allergies?.trim() || 'Penicillin & Sulfa').slice(0, 36)}`,
+              description: `Confirmed history: ${formData.allergies?.trim() || 'Penicillin-induced urticaria/rash and Sulfonamide intolerance'}. Ensure formulary guard blocks related prescribing.`,
+              implicatedItem: formData.allergies?.trim() || 'Penicillin, Sulfonamides',
               clinicalAction: 'Active allergy tag linked to patient profile',
               sourceSection: 'Documented Patient Sensitivities',
             },
@@ -505,16 +533,38 @@ export const ReportProcessing: React.FC = () => {
               { test: 'eGFR', result: '84 mL/min', flag: 'Normal', range: '> 60 mL/min' },
               { test: 'Potassium (K+)', result: '4.3 mEq/L', flag: 'Normal', range: '3.5 - 5.0 mEq/L' },
             ],
-            medications: [
-              { name: 'Lisinopril', dosage: '10mg PO Daily', source: 'Documented Patient Intake' },
-              { name: 'Metformin', dosage: '500mg PO BID', source: 'Documented Patient Intake' },
-              { name: 'Vitamin D3', dosage: '1000 IU Daily', source: 'Documented Patient Intake' },
-            ],
-            conditionsHistory: [
-              { condition: 'Primary Hypertension (controlled)', source: 'Documented History' },
-              { condition: 'Type 2 Diabetes Mellitus (stable on Metformin)', source: 'Documented History & Report' },
-              { condition: 'Mild Osteopenia', source: 'Documented History' },
-            ],
+            medications: formData.currentMedications?.trim()
+              ? formData.currentMedications
+                  .split(/[\n,;]+/)
+                  .map((m) => m.trim())
+                  .filter(Boolean)
+                  .map((m) => {
+                    const parts = m.split(' ');
+                    return {
+                      name: parts[0] || m,
+                      dosage: parts.slice(1).join(' ') || 'Standard Dose',
+                      source: 'Documented Patient Intake',
+                    };
+                  })
+              : [
+                  { name: 'Lisinopril', dosage: '10mg PO Daily', source: 'Documented Patient Intake' },
+                  { name: 'Metformin', dosage: '500mg PO BID', source: 'Documented Patient Intake' },
+                  { name: 'Vitamin D3', dosage: '1000 IU Daily', source: 'Documented Patient Intake' },
+                ],
+            conditionsHistory: formData.existingConditions?.trim()
+              ? formData.existingConditions
+                  .split(/[\n,;]+/)
+                  .map((c) => c.trim())
+                  .filter(Boolean)
+                  .map((c) => ({
+                    condition: c,
+                    source: 'Documented Patient Intake',
+                  }))
+              : [
+                  { condition: 'Primary Hypertension (controlled)', source: 'Documented History' },
+                  { condition: 'Type 2 Diabetes Mellitus (stable on Metformin)', source: 'Documented History & Report' },
+                  { condition: 'Mild Osteopenia', source: 'Documented History' },
+                ],
             recommendations: [
               {
                 action: 'Correlate with Clinical Presentation',
@@ -533,9 +583,13 @@ export const ReportProcessing: React.FC = () => {
               },
             ],
           },
+          timeline: buildMedicalTimeline(formData),
           summaryNote:
             'Structured clinical intelligence organized for clinical decision support. All values linked to source document citations.',
         };
+
+        // Asynchronously synchronize with backend API
+        apiProcessReport(uploadedReport, formData).catch(() => {});
 
         setProcessingResult(result);
         setIsProcessing(false);
@@ -580,8 +634,12 @@ export const ReportProcessing: React.FC = () => {
 
         <button
           type="button"
-          onClick={() => setCurrentStep(1)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200/70 transition-colors cursor-pointer self-start sm:self-auto"
+          disabled={isProcessing}
+          onClick={() => {
+            setIsConfirmed(false);
+            setCurrentStep(1);
+          }}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200/70 transition-colors cursor-pointer self-start sm:self-auto disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           <span>Back to Step 1 (Edit Patient)</span>
@@ -727,7 +785,6 @@ export const ReportProcessing: React.FC = () => {
           )}
 
           {/* Safety & Provenance Notice (Requirement 11) */}
-          {/* Safety & Provenance Notice (Requirement 11) */}
           <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-start gap-3">
             <ShieldAlert className="w-4 h-4 text-cyan-700 shrink-0 mt-0.5" />
             <div className="text-xs text-slate-600 space-y-0.5">
@@ -783,7 +840,7 @@ export const ReportProcessing: React.FC = () => {
 
                   return (
                     <div
-                      key={idx}
+                      key={stage.title}
                       className={`flex items-start gap-3 p-2.5 rounded-xl border transition-all duration-200 ${
                         isActive
                           ? 'bg-cyan-950/40 border-cyan-500/50 text-white shadow-xs'
@@ -835,7 +892,10 @@ export const ReportProcessing: React.FC = () => {
           <div className="pt-4 border-t border-slate-200 flex flex-col-reverse sm:flex-row items-center justify-between gap-4">
             <button
               type="button"
-              onClick={() => setCurrentStep(1)}
+              onClick={() => {
+                setIsConfirmed(false);
+                setCurrentStep(1);
+              }}
               disabled={isProcessing}
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-700 font-semibold text-sm transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
