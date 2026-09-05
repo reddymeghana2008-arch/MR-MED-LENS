@@ -27,7 +27,24 @@ export const PatientDataPreview: React.FC<PatientDataPreviewProps> = ({ onBackTo
   if (!storedRecord) return null;
 
   const handleCopyJson = () => {
-    navigator.clipboard.writeText(JSON.stringify(storedRecord, null, 2));
+    const jsonStr = JSON.stringify(storedRecord, null, 2);
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(jsonStr).catch(() => {
+        try {
+          const textArea = document.createElement('textarea');
+          textArea.value = jsonStr;
+          textArea.style.position = 'fixed';
+          textArea.style.opacity = '0';
+          document.body.appendChild(textArea);
+          textArea.focus();
+          textArea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textArea);
+        } catch {
+          // Fallback ignored
+        }
+      });
+    }
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

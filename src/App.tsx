@@ -6,6 +6,7 @@ import { StepIndicator } from './components/StepIndicator';
 import { PatientForm } from './components/PatientForm';
 import { PatientDataPreview } from './components/PatientDataPreview';
 import { ReportProcessing } from './components/ReportProcessing';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { ShieldCheck, HeartPulse } from 'lucide-react';
 
 const MainContent: React.FC = () => {
@@ -73,9 +74,11 @@ const MainContent: React.FC = () => {
 
 export const App: React.FC = () => {
   return (
-    <PatientProvider>
-      <MainContent />
-    </PatientProvider>
+    <ErrorBoundary>
+      <PatientProvider>
+        <MainContent />
+      </PatientProvider>
+    </ErrorBoundary>
   );
 };
 

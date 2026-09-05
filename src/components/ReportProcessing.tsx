@@ -29,6 +29,10 @@ const ALLOWED_MIME_TYPES = [
 ];
 const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024; // 25 MB
 
+const sanitizeFileName = (name: string): string => {
+  return name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 120);
+};
+
 export const ReportProcessing: React.FC = () => {
   const {
     formData,
@@ -41,14 +45,18 @@ export const ReportProcessing: React.FC = () => {
     clearReport,
   } = usePatient();
 
-
   const [isDragging, setIsDragging] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   React.useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    return () => {
+      // Clean up all pending timers if component unmounts
+      timersRef.current.forEach((t) => clearTimeout(t));
+    };
   }, []);
 
   // Active patient display name
@@ -87,7 +95,22 @@ export const ReportProcessing: React.FC = () => {
     setErrorMessage(null);
     setProcessingResult(null);
 
-    // Validate type
+    // Validate size (cannot be empty or exceed max limit)
+    if (!file || file.size <= 0) {
+      setErrorMessage(
+        'The selected file is empty (0 bytes). Please upload a valid medical report.'
+      );
+      return false;
+    }
+
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      setErrorMessage(
+        `File is too large (${formatFileSize(file.size)}). Maximum allowed file size is 25 MB.`
+      );
+      return false;
+    }
+
+    // Validate type and extension
     const lowerName = file.name.toLowerCase();
     const hasValidExt = ALLOWED_EXTENSIONS.some((ext) => lowerName.endsWith(ext));
     const hasValidMime = ALLOWED_MIME_TYPES.includes(file.type);
@@ -99,17 +122,11 @@ export const ReportProcessing: React.FC = () => {
       return false;
     }
 
-    // Validate size
-    if (file.size > MAX_FILE_SIZE_BYTES) {
-      setErrorMessage(
-        `File is too large (${formatFileSize(file.size)}). Maximum allowed file size is 25 MB.`
-      );
-      return false;
-    }
+    const sanitizedName = sanitizeFileName(file.name);
 
     const report: UploadedReport = {
       id: `REP-${Date.now().toString().slice(-6)}`,
-      name: file.name,
+      name: sanitizedName,
       size: file.size,
       type: file.type || (lowerName.endsWith('.pdf') ? 'application/pdf' : 'image/jpeg'),
       lastModified: file.lastModified,
@@ -205,38 +222,40 @@ export const ReportProcessing: React.FC = () => {
     setProcessingStage(0);
     setProcessingProgress(15);
 
-    // Multi-stage realistic AI processing simulation sequence (~2.5 seconds total)
-    const stageTimeouts: Array<ReturnType<typeof setTimeout>> = [];
+    // Clear any prior running timers
+    timersRef.current.forEach((t) => clearTimeout(t));
+    timersRef.current = [];
 
-    stageTimeouts.push(
+    // Multi-stage realistic AI processing simulation sequence (~2.5 seconds total)
+    timersRef.current.push(
       setTimeout(() => {
         setProcessingStage(1);
         setProcessingProgress(38);
       }, 500)
     );
 
-    stageTimeouts.push(
+    timersRef.current.push(
       setTimeout(() => {
         setProcessingStage(2);
         setProcessingProgress(62);
       }, 1000)
     );
 
-    stageTimeouts.push(
+    timersRef.current.push(
       setTimeout(() => {
         setProcessingStage(3);
         setProcessingProgress(84);
       }, 1500)
     );
 
-    stageTimeouts.push(
+    timersRef.current.push(
       setTimeout(() => {
         setProcessingStage(4);
         setProcessingProgress(98);
       }, 2000)
     );
 
-    stageTimeouts.push(
+    timersRef.current.push(
       setTimeout(() => {
         setProcessingProgress(100);
 

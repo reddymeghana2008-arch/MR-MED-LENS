@@ -204,6 +204,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSuccessContinue }) =
                   required
                   placeholder="e.g., Sarah Connor"
                   value={formData.patientName}
+                  maxLength={100}
                   onChange={(e) => handleFieldChange('patientName', e.target.value)}
                   error={touched.patientName || errors.patientName ? errors.patientName : undefined}
                   helperText="Full legal name or clinical identifier"
@@ -220,6 +221,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSuccessContinue }) =
                   placeholder="e.g., 42"
                   min={0}
                   max={130}
+                  maxLength={3}
                   value={formData.age}
                   onChange={(e) => handleFieldChange('age', e.target.value)}
                   error={touched.age || errors.age ? errors.age : undefined}
@@ -263,6 +265,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSuccessContinue }) =
                   label="Symptoms & Chief Complaint"
                   placeholder="Describe observed symptoms, onset, severity, and duration (e.g. episodic migraines with visual aura for 4 days)..."
                   rows={4}
+                  maxLength={1000}
                   value={formData.symptoms}
                   onChange={(e) => handleFieldChange('symptoms', e.target.value)}
                   helperText="List primary patient-reported complaints"
@@ -277,6 +280,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSuccessContinue }) =
                   label="Existing Conditions"
                   placeholder="Known chronic illnesses or past medical history (e.g., Asthma, Hypertension, Type 2 Diabetes)..."
                   rows={4}
+                  maxLength={1000}
                   value={formData.existingConditions}
                   onChange={(e) => handleFieldChange('existingConditions', e.target.value)}
                   helperText="Comorbidities and ongoing diagnoses"
@@ -303,6 +307,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSuccessContinue }) =
                   label="Allergies & Adverse Reactions"
                   placeholder="Document drug, food, or environmental allergies and the reaction type (e.g., Penicillin - rash, Peanuts - anaphylaxis)..."
                   rows={3}
+                  maxLength={1000}
                   value={formData.allergies}
                   onChange={(e) => handleFieldChange('allergies', e.target.value)}
                   helperText="Include severity or reaction notes if known"
@@ -317,6 +322,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSuccessContinue }) =
                   label="Current Medications"
                   placeholder="Active pharmaceuticals, dosages, and regimens (e.g., Atorvastatin 20mg once daily at bedtime)..."
                   rows={3}
+                  maxLength={1000}
                   value={formData.currentMedications}
                   onChange={(e) => handleFieldChange('currentMedications', e.target.value)}
                   helperText="Prescriptions, OTC items, or supplements"
@@ -341,6 +347,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSuccessContinue }) =
                 label="Additional Notes & Observations"
                 placeholder="Supplementary notes, social history, lifestyle factors, or relevant lab tests mentioned during intake..."
                 rows={3}
+                maxLength={1500}
                 value={formData.additionalNotes}
                 onChange={(e) => handleFieldChange('additionalNotes', e.target.value)}
                 helperText="Any auxiliary context that will aid subsequent AI information organization"

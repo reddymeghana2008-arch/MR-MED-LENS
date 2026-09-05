@@ -8,6 +8,7 @@ interface BaseFormFieldProps {
   error?: string;
   helperText?: string;
   className?: string;
+  maxLength?: number;
 }
 
 interface InputFormFieldProps extends BaseFormFieldProps {
@@ -42,7 +43,7 @@ export type FormFieldProps =
   | TextareaFormFieldProps;
 
 export const FormField: React.FC<FormFieldProps> = (props) => {
-  const { id, label, required = false, error, helperText, className = '' } = props;
+  const { id, label, required = false, error, helperText, className = '', maxLength } = props;
 
   const inputBaseClasses = `
     w-full px-3.5 py-2.5 bg-white border rounded-lg text-slate-800 text-sm
@@ -79,6 +80,7 @@ export const FormField: React.FC<FormFieldProps> = (props) => {
           value={props.value}
           onChange={props.onChange}
           placeholder={props.placeholder}
+          maxLength={maxLength}
           aria-invalid={!!error}
           aria-describedby={error ? `${id}-error` : helperText ? `${id}-helper` : undefined}
           className={`${inputBaseClasses} resize-y min-h-[78px]`}
@@ -124,6 +126,7 @@ export const FormField: React.FC<FormFieldProps> = (props) => {
           value={props.value}
           onChange={props.onChange}
           placeholder={props.placeholder}
+          maxLength={maxLength}
           min={props.min}
           max={props.max}
           aria-invalid={!!error}
